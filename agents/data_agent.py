@@ -18,7 +18,7 @@ llm_router = llm.with_structured_output(RouterSchema)
 
 # -- Data Agent Graph --
 def router_node(state: DataAgentSchema):
-    message = state.messages
+    message = state.messages[-1].content
 
     response_dict = llm_router.invoke(message).model_dump()
     router_res = response_dict["answer"]
@@ -41,18 +41,16 @@ def sql_node(state: DataAgentSchema):
     }
 
     res = sql_analyst.invoke(input_schema)
-    state.messages = state.messages + [res]
-    return state
+    return {"messages": [res]}
 
 def etl_node(state: DataAgentSchema):
     message = state.messages[-1].content
 
     res = etl_analyst.invoke({
-        "messages": [HumanMessage(content=message)]
+        "messages": [HumanMessage(content=f"{message}")]
     })
 
-    state.messages = state.messages + [res]
-    return state
+    return {"messages": [res]}
 
 
 data_agent_graph = StateGraph(DataAgentSchema)
@@ -82,15 +80,15 @@ data_agent_graph.add_conditional_edges(
 
 data_agent = data_agent_graph.compile()
 
-from IPython import display, Image
-img = Image(data_agent_graph.get_graph().draw_mermaid_png())
+from IPython.display import display, Image
+img = Image(data_agent.get_graph().draw_mermaid_png())
 with open("data_agent_graph.png", "wb") as f:
     f.write(img.data)
 
 if __name__ == "__main__":
     response = data_agent.invoke(
         {"messages":[HumanMessage(content="I want to extract the data from the API endpoint 'https://pokeapi.co/api/v2/pokemon' and save it to data/extract folder in the csv folder")],
-         "route_response": ""}
+         "router_response": ""}
     )
 
     print(response)

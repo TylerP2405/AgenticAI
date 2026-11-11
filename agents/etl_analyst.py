@@ -44,7 +44,7 @@ def transform_load_tool(file_path: str, output_folder: str, output_format: str, 
     Returns:
         str: A message indicating the success or failure of the operation
     """
-    etl_tools = ETLTools
+    etl_tools = ETLTools()
     top_3_rows = etl_tools.transform_load_context(file_path)
     llm = pick_llm("low")
 
@@ -86,8 +86,7 @@ def llm_node(state: ETLAgentSchema):
             Here's the chat history: {messages}\n
     """
     response = llm_bind.invoke(prompt)
-    state.messages = messages + [AIMessage(content=response)]
-    return state
+    return {"messages": [response]}
 
 
 def tool_node(state: ETLAgentSchema):
@@ -104,9 +103,7 @@ def tool_node(state: ETLAgentSchema):
         observation = tool.invoke(tool_call['args'])
         tools_res.append(ToolMessage(content=observation, tool_call_id=tool_call['id']))
 
-    state.messages = state.messages + tools_res
-
-    return state
+    return {"messages": tools_res}
 
 
 # Node & Edge
